@@ -1,0 +1,11 @@
+Cognito User pool id: eu-north-1_mJ6THdEDm
+Cognito Client id: 3hajukh7aag1rcn9gt0vqp2qov
+Cognito Domain: https://eu-north-1mj6thdedm.auth.eu-north-1.amazoncognito.com
+S3 Bucket:
+CloudFront distribution URL:
+RDS Host:
+RDS Username:
+RDS Password:
+Internal ALB URL:
+ECR Login:
+SNS ARN:
