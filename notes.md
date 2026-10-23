@@ -197,6 +197,81 @@ Select the **free tier** plan, then follow the screens below.
 ![CloudFront error page 2](notesImages/CloudFront5.png)
 
 ### 6.4 Current Status
-![alt text](image.png)
-![alt text](image-1.png)
-![alt text](image-2.png)
+![CloudFront Link](notesImages/CurrentStatus1.png)
+![Create Account](notesImages/CurrentStatus2.png)
+![Login](notesImages/CurrentStatus3.png)
+
+
+### 6.5 Data Layer
+
+#### 6.5.1 Architecture Overview
+
+![Data layer architecture](notesImages/DataLayerArch.png)
+
+#### 6.5.2 Upload Product Images to S3
+
+Product images are stored in an S3 bucket and served through CloudFront.
+
+![S3 product images](notesImages/S3Product.png)
+
+**Steps:**
+
+1. Configure the S3 bucket to store product images.
+2. Upload the product images using `upload-images-to-s3.sh`.
+3. Configure the required environment variables:
+
+| Variable | Where to find it | Example |
+|---|---|---|
+| `BUCKET_NAME` | AWS Console → S3 → Buckets | `ecommerce-product-images-12345` |
+| `REGION` | AWS Console → S3 → Bucket → Properties | `ap-south-1` |
+| `IMAGES_DIR` | Project directory | `product-images` |
+| `S3_PREFIX` | Choose a prefix for the uploaded files | `images/products` |
+| `CLOUDFRONT_DOMAIN` | AWS Console → CloudFront → Distributions | `d123abc.cloudfront.net` |
+
+![Image upload script configuration](notesImages/ImageUploadScript.png)
+
+#### 6.5.3 Create DynamoDB Tables
+
+Create the following DynamoDB tables to store product and shopping cart data.
+
+![DynamoDB tables](notesImages/DynamoDBTables.png)
+
+1. **Product Table** – Stores product information, including names, prices, descriptions, and image URLs.
+2. **Cart Table** – Stores shopping cart information.
+
+![DynamoDB configuration](notesImages/DynamoDB1.png)
+![DynamoDB configuration](notesImages/DynamoDB2.png)
+
+![DynamoDB table details](notesImages/DynamoDB3.png)
+
+#### 6.5.4 Update Product Image URLs
+
+The product image URLs in `products.json` must point to the CloudFront distribution rather than directly to S3. This allows the frontend to load images through CloudFront.
+
+**Steps:**
+
+1. Update the CloudFront domain in the configuration.
+2. Run `update-product-image-urls.sh` to replace the S3 image URLs with the corresponding CloudFront URLs.
+3. Verify that the image URLs in `products.json` are correct.
+4. Load the updated product data into the DynamoDB Product Table.
+
+![Update product image URLs](notesImages/UpdateProduct1.png)
+
+![Updated product configuration](notesImages/UpdateProduct2.png)
+
+### 6.6 RDS Database Setup
+
+#### 6.6.1 Create a DB Subnet Group
+
+1. Open **AWS Console → RDS → Subnet groups**.
+2. Create a new DB subnet group.
+3. Select the VPC used by the application.
+4. Add two private subnets located in different Availability Zones.
+
+#### 6.6.2 Create a Database Security Group
+
+Create a security group for the RDS database and configure its inbound rules to allow PostgreSQL traffic on port `5432` only from the required application security group.
+
+![RDS security group configuration](notesImages/RDSSecurityGroup.png)
+
+

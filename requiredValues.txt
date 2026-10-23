@@ -1,8 +1,8 @@
 Cognito User pool id: eu-north-1_mJ6THdEDm
 Cognito Client id: 3hajukh7aag1rcn9gt0vqp2qov
 Cognito Domain: https://eu-north-1mj6thdedm.auth.eu-north-1.amazoncognito.com
-S3 Bucket:
-CloudFront distribution URL:
+S3 Bucket: ecommerce-app-deniz
+CloudFront distribution URL: d1wrhw54c7kdte.cloudfront.net
 RDS Host:
 RDS Username:
 RDS Password:
