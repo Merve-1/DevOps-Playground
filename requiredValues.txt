@@ -4,8 +4,9 @@ Cognito Domain: https://eu-north-1mj6thdedm.auth.eu-north-1.amazoncognito.com
 S3 Bucket: ecommerce-app-deniz
 CloudFront distribution URL: d1wrhw54c7kdte.cloudfront.net
 RDS Host:
-RDS Username:
+RDS Username: postgre
 RDS Password:
-Internal ALB URL:
-ECR Login:
+DB Endpoint & port: ecommerce-db.cfwcay4cw8on.eu-north-1.rds.amazonaws.com
+Internal ALB URL: https://internal-ecommerce-alb-1501617092.eu-north-1.elb.amazonaws.com
+ECR Login: 002581114746.dkr.ecr.eu-north-1.amazonaws.com/ecommerce/cart-service
 SNS ARN:
