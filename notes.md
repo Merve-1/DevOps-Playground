@@ -9,13 +9,15 @@ Implementation of the course project
 ## Contents
 
 1. [Setup](#1-setup)
-2. [Architecture overview](#2-architecture-overview)
-3. [Application request flows](#3-application-request-flows)
-4. [Network setup (VPC)](#4-network-setup-vpc)
+2. [Architecture Overview](#2-architecture-overview)
+3. [Application Request Flows](#3-application-request-flows)
+4. [Network Setup (VPC)](#4-network-setup-vpc)
 5. [Authentication (Cognito)](#5-authentication-cognito)
-6. [Deployment (S3 + CloudFront + DynamoDB + RDS + Application Load + ECR Repositories + ECS)](#6-frontend-deployment-s3--cloudfront)
-7. [API Gateway ()](#7-API-GateWay)
-8. [Backend & Frontend Integration ()](#8-Integration)
+6. [Deployment (S3 + CloudFront + DynamoDB + RDS + Application Load Balancer + ECR + ECS)](#6-frontend-deployment-s3--cloudfront)
+7. [API Gateway](#7-api-gateway)
+8. [Integration](#8-integration)
+9. [Notifications](#9-notifications)
+10. [Cleanup](#10-cleanup)
 ---
 
 ## 1. Setup
