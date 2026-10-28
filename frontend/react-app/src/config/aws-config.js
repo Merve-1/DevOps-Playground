@@ -6,6 +6,7 @@ const awsConfig = {
       loginWith: { email: true },
     },
   },
+  
 };
 
 export const API_BASE_URL = (

@@ -4,7 +4,7 @@
 # Usage: ./update-product-image-urls.sh <cloudfront-base-url>
 # Example: ./update-product-image-urls.sh https://d1234567890.cloudfront.net
 
-CLOUDFRONT_URL=d1wrhw54c7kdte.cloudfront.net  # strip trailing slash if present
+CLOUDFRONT_URL="https://d1wrhw54c7kdte.cloudfront.net" # strip trailing slash if present
 IMAGE_PREFIX="images/products"
 PRODUCTS_FILE="products.json"
 

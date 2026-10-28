@@ -9,4 +9,4 @@ RDS Password:
 DB Endpoint & port: ecommerce-db.cfwcay4cw8on.eu-north-1.rds.amazonaws.com
 Internal ALB URL: https://internal-ecommerce-alb-1501617092.eu-north-1.elb.amazonaws.com
 ECR Login: 002581114746.dkr.ecr.eu-north-1.amazonaws.com/ecommerce/cart-service
-SNS ARN:
+SNS ARN: arn:aws:sns:eu-north-1:002581114746:ecommerce-order-events

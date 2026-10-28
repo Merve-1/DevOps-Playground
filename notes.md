@@ -3,7 +3,6 @@
 Implementation of the course project
 [Udemy: Build E-Commerce Application on AWS](https://www.udemy.com/course/build-ecommerce-application-on-aws/learn/lecture/55627777#overview).
 
-**Total cost of running this application:** _TODO: fill in_
 
 ---
 
@@ -14,8 +13,9 @@ Implementation of the course project
 3. [Application request flows](#3-application-request-flows)
 4. [Network setup (VPC)](#4-network-setup-vpc)
 5. [Authentication (Cognito)](#5-authentication-cognito)
-6. [Frontend deployment (S3 + CloudFront)](#6-frontend-deployment-s3--cloudfront)
-
+6. [Deployment (S3 + CloudFront + DynamoDB + RDS + Application Load + ECR Repositories + ECS)](#6-frontend-deployment-s3--cloudfront)
+7. [API Gateway ()](#7-API-GateWay)
+8. [Backend & Frontend Integration ()](#8-Integration)
 ---
 
 ## 1. Setup
@@ -478,20 +478,189 @@ Configure Docker to authenticate with the ECR registry in the AWS account and Re
 
 ### 6.11.3 Build Docker Images
 
-Build the Docker images for the backend services before pushing them to ECR.
+Build the Docker images for the backend services before pushing them to Amazon ECR.
 
 ![Docker image build](notesImages/DockerBuild1.png)
 
-**Deployment workflow:**
+Repeat the process for each backend service, then tag and push the images to their corresponding ECR repositories.
 
-1. Authenticate Docker with ECR.
+![Tag and push Docker images](notesImages/Tag&Push.png)
+
+![ECR repositories](notesImages/ECR1.png)
+
+**Alternative:** You can use `build-and-deploy-services.sh` to automate the build, tag, and push process instead of performing these steps manually.
+
+---
+
+### 6.11.4 Create the ECS Task Security Group
+
+Create the security group required by the ECS tasks.
+
+![Security group creation](notesImages/securityGPCreation.png)
+
+---
+
+### 6.11.5 Create the IAM Role
+
+Create an IAM role for the ECS tasks and attach the required permissions.
+
+![Create IAM role](notesImages/IAM1.png)
+
+Select the following permissions:
+
+1. `AmazonDynamoDBFullAccess_v2`
+2. `AmazonSSMReadOnlyAccess`
+3. `CloudWatchLogsFullAccess`
+4. `AmazonS3ReadOnlyAccess`
+5. `AmazonSNSFullAccess`
+
+![IAM role permissions](notesImages/rolePermission.png)
+
+![IAM role configuration](notesImages/IAM2.png)
+
+![IAM role summary](notesImages/IAM3.png)
+
+**Security note:** These policies provide broad permissions. For a production deployment, replace them with least-privilege policies that grant access only to the resources and actions each service requires.
+
+---
+
+### 6.11.6 Create ECS Task Definitions
+
+Create a separate task definition for each backend service.
+
+#### Product Service
+
+![Product task definition — Step 1](notesImages/TaskDefinition1.png)
+
+![Product task definition — Step 2](notesImages/TaskDefinition2.png)
+
+![Product task definition — Step 3](notesImages/TaskDefinition3.png)
+
+![Product task definition — Step 4](notesImages/TaskDefinition4.png)
+
+![Product task definition — Step 5](notesImages/TaskDefinition5.png)
+
+#### Cart Service
+
+![Cart task definition — Step 1](notesImages/cartTask1.png)
+
+![Cart task definition — Step 2](notesImages/cartTask2.png)
+
+![Cart task definition — Step 3](notesImages/cartTask3.png)
+
+![Cart task definition — Step 4](notesImages/cartTask4.png)
+
+![Cart task definition — Step 5](notesImages/cartTask5.png)
+
+#### User Service
+
+![User task definition](notesImages/userTask.png)
+
+#### Order Service
+
+![Order task definition](notesImages/orderTask.png)
+
+---
+
+### 6.11.7 Create the ECS Cluster
+
+Create an Amazon ECS cluster using **AWS Fargate** as the infrastructure option.
+
+![ECS cluster creation — Step 1](notesImages/clusterCreation1.png)
+
+---
+
+### 6.11.8 Create ECS Services
+
+Create an ECS service for each backend application:
+
+- Product service
+- Cart service
+- User service
+- Order service
+
+Configure each service with the following settings:
+
+1. **Task definition:** Select the corresponding task definition.
+2. **Desired tasks:** Set the desired task count to `1`.
+3. **Networking:** Select the `ecommerce-vpc` and the appropriate private subnets.
+4. **Security group:** Select the ECS task security group.
+5. **Public IP:** Disable public IP assignment.
+6. **Load balancing:** Select the Application Load Balancer and the target group created for the service.
+
+Repeat the configuration for all backend services.
+
+![ECS service creation — Step 1](notesImages/clusterCreation2.png)
+
+![ECS service creation — Step 2](notesImages/clusterCreation3.png)
+
+![ECS service configuration — Step 3](notesImages/clusterCreation4.png)
+
+![ECS service configuration — Step 4](notesImages/clusterCreation5.png)
+
+![ECS service configuration — Step 5](notesImages/clusterCreation6.png)
+
+![ECS service configuration — Step 6](notesImages/clusterCreation7.png)
+
+![ECS service configuration — Step 7](notesImages/clusterCreation8.png)
+
+![ECS service configuration — Step 8](notesImages/clusterCreation9.png)
+
+![ECS service configuration — Step 9](notesImages/clusterCreation10.png)
+
+**Verification:** Confirm that all ECS services are running and that their associated target groups report healthy targets.
+
+---
+
+### 6.11.9 Create an EC2 Instance for Verification
+
+Create an EC2 instance to test connectivity to the backend services.
+
+![EC2 instance creation — Step 1](notesImages/createEC2-1.png)
+
+![EC2 instance creation — Step 2](notesImages/createEC2-2.png)
+
+#### Initial Error
+
+During testing, the first request returned an error.
+
+![Initial verification error](notesImages/createEC2-3.png)
+
+#### Successful Response
+
+After correcting the configuration issues, the request returned the expected response.
+
+![Successful verification response](notesImages/createEC2-4.png)
+
+#### Debugging Steps and Fixes
+
+The initial failure was caused by incorrect configuration of the DynamoDB table used by the product service.
+
+| # | Update | Where |
+|---|---|---|
+| 1 | Found the underlying `ResourceNotFoundException` during a DynamoDB `Scan` operation. | CloudWatch → `/ecs/product-service` |
+| 2 | Created the `ecommerce-products` DynamoDB table with a String partition key named `product_id` and loaded 20 items. | DynamoDB, `eu-north-1` |
+| 3 | Discovered that the baked-in `.env` file overrode the intended table name. The startup log showed `Products Table: products`. | `.env`, `Dockerfile` |
+| 4 | Added `.env` to `.dockerignore` to prevent it from being included in the Docker image. | `services/product-service/` |
+| 5 | Changed the default table name in `config.py` to `ecommerce-products`. | `config.py` |
+| 6 | Rebuilt, tagged, and pushed the updated image to ECR. | WSL: `docker build`, `docker tag`, `docker push` |
+| 7 | Created task definition revision 2, referencing the updated image. | ECS → Task definitions |
+| 8 | Updated the ECS service to use revision 2 and forced a new deployment. | ECS → Product service |
+| 9 | Verified that the startup log showed `Products Table: ecommerce-products` and that a request from the EC2 instance returned HTTP `200 OK`. | CloudWatch and EC2 |
+
+#### Docker Deployment Workflow
+
+Repeat the following workflow whenever a backend service needs to be updated:
+
+1. Authenticate Docker with Amazon ECR.
 2. Build the Docker image for the required service.
 3. Tag the image with the appropriate ECR repository URI.
 4. Push the image to the ECR repository.
-5. Update the ECS task definition to use the new image, when necessary.
-6. Deploy the updated ECS service and verify its health.
+5. Update the ECS task definition to reference the new image, if necessary.
+6. Deploy the updated ECS service.
+7. Verify that the new tasks start successfully and pass their health checks.
 
-**Note:** Repeat this workflow for each backend service.
+**Note:** Repeat this workflow for each backend service that requires an update.
 
 ---
 
@@ -524,7 +693,7 @@ Use this checklist to verify the backend deployment.
 
 ### Load Balancing and Validation
 
-- [ ] The ALB has been created and configured.
+- [ ] The Application Load Balancer has been created and configured.
 - [ ] Each backend service has the correct target group.
 - [ ] Listener rules route requests to the appropriate services.
 - [ ] Target group health checks are passing.
@@ -532,3 +701,236 @@ Use this checklist to verify the backend deployment.
 - [ ] The frontend can communicate with the backend.
 
 ---
+
+## 7. API Gateway
+
+Amazon API Gateway provides the HTTP API entry point for the backend services.
+
+![API Gateway architecture — Step 1](notesImages/APIGateway1.png)
+
+![API Gateway architecture — Step 2](notesImages/APIGateway2.png)
+
+### 7.1 Setup Steps
+
+1. Create a security group for the VPC link.
+2. Create the VPC link using the `ecommerce-vpc`, the appropriate private ECS subnets, and the VPC link security group.
+3. Create an HTTP API in API Gateway.
+4. Configure HTTP integrations using the VPC link to reach the private backend resources.
+5. Configure JWT authorization.
+6. Create API routes and associate them with the appropriate integrations and authorization settings.
+7. Configure Cross-Origin Resource Sharing (CORS).
+
+### 7.2 Create the VPC Link Security Group
+
+Create the security group required by the VPC link.
+
+![VPC link security group](notesImages/createSecurityGroup2.png)
+
+### 7.3 Create the VPC Link
+
+Configure the VPC link to connect API Gateway to the private backend resources.
+
+![VPC link creation — Step 1](notesImages/vpclink1.png)
+
+![VPC link creation — Step 2](notesImages/vpclink2.png)
+
+![VPC link creation — Step 3](notesImages/vpclink3.png)
+
+### 7.4 Create the HTTP API
+
+Create the API and configure its integrations.
+
+![HTTP API configuration — Step 1](notesImages/apis1.png)
+
+![HTTP API configuration — Step 2](notesImages/apis2.png)
+
+![HTTP API configuration — Step 3](notesImages/apis3.png)
+
+![HTTP API configuration — Step 4](notesImages/apis4.png)
+
+![HTTP API configuration — Step 5](notesImages/apis5.png)
+
+### 7.5 Configure Routes and Authorization
+
+Create the API routes, associate each route with its integration, and configure authorization as required.
+
+![API route configuration — Step 1](notesImages/rotuesCreation1.png)
+
+![API route configuration — Step 2](notesImages/rotuesCreation2.png)
+
+![API route configuration — Step 3](notesImages/rotuesCreation3.png)
+
+### 7.6 Configure CORS
+
+Configure Cross-Origin Resource Sharing (CORS) to allow requests from the frontend.
+
+Set the required:
+
+- **Origins:** The frontend origin, such as the CloudFront URL.
+- **Headers:** The headers required by the frontend and API.
+- **Methods:** The HTTP methods used by the application.
+
+![API Gateway CORS configuration](notesImages/CORS.png)
+
+### 7.7 Test the API
+
+Test the configured API endpoints.
+
+![API Gateway testing](notesImages/testing1.png)
+
+**Observation:** Routes protected by JWT authorization cannot be accessed without a valid JWT token. This is expected behavior for authenticated endpoints.
+
+---
+
+## 8. Frontend and Backend Integration
+
+Update the frontend configuration to use the API Gateway endpoint, then rebuild and redeploy the frontend.
+
+### 8.1 Integration Steps
+
+1. Update the API URL in `aw_config.js`.
+2. Rebuild the frontend.
+3. Upload the updated build output to the S3 frontend bucket.
+4. Invalidate the CloudFront cache.
+5. Test the complete application using the CloudFront URL.
+
+### 8.2 Update the API URL and Rebuild the Frontend
+
+Update the API endpoint in the frontend configuration and rebuild the application.
+
+![Update API configuration](notesImages/update.png)
+
+### 8.3 Deploy the Updated Frontend
+
+Upload the new frontend build to the S3 bucket.
+
+![Upload updated frontend](notesImages/push.png)
+
+### 8.4 Invalidate the CloudFront Cache
+
+Invalidate the CloudFront cache so that users receive the updated frontend files.
+
+![CloudFront cache invalidation](notesImages/invalidate.png)
+
+### 8.5 Test the Application
+
+Verify that the frontend communicates correctly with the backend through API Gateway.
+
+![End-to-end testing — Step 1](notesImages/testing2.png)
+
+![End-to-end testing — Step 2](notesImages/testing3.png)
+
+![End-to-end testing — Step 3](notesImages/testing4.png)
+
+![End-to-end testing — Step 4](notesImages/testing5.png)
+
+---
+
+## 9. Notifications
+
+Configure Amazon SNS and Amazon SQS to support the application's order notification workflow.
+
+![Notification architecture — Step 1](notesImages/notification1.png)
+
+![Notification architecture — Step 2](notesImages/notification2.png)
+
+### 9.1 Setup Steps
+
+1. Create an SNS topic.
+2. Create an SQS queue.
+3. Create a subscription connecting the SNS topic to the SQS queue.
+4. Update the relevant AWS Systems Manager Parameter Store parameter with the SNS topic ARN.
+5. Redeploy the order service so that it uses the updated configuration.
+6. Test the notification workflow by placing an order.
+
+### 9.2 Create the SNS Topic
+
+Create an SNS topic for order notifications.
+
+![SNS topic creation](notesImages/SNSTopic.png)
+
+### 9.3 Create the SQS Queue
+
+Create the SQS queue that will receive messages published through SNS.
+
+![SQS queue creation](notesImages/SQS.png)
+
+### 9.4 Create the SNS Subscription
+
+Subscribe the SQS queue to the SNS topic.
+
+![SNS subscription — Step 1](notesImages/SubscriptionCreation1.png)
+
+![SNS subscription — Step 2](notesImages/SubscriptionCreation2.png)
+
+![SNS subscription — Step 3](notesImages/SubscriptionCreation3.png)
+
+### 9.5 Update Parameter Store
+
+Update the relevant Systems Manager Parameter Store parameter with the SNS topic ARN.
+
+![Update Parameter Store — Step 1](notesImages/SSM1.png)
+
+![Update Parameter Store — Step 2](notesImages/SSM2.png)
+
+### 9.6 Redeploy the Order Service
+
+Redeploy the order service to apply the updated configuration.
+
+![Order service redeployment](notesImages/orderRedeploy.png)
+
+### 9.7 Verify the Complete Website
+
+Test the complete application, including the frontend, backend APIs, order processing, and notification workflow.
+
+![Complete website — Step 1](notesImages/FullWebsite1.png)
+
+![Complete website — Step 2](notesImages/FullWebsite2.png)
+
+![Complete website — Step 3](notesImages/FullWebsite3.png)
+
+![Complete website — Step 4](notesImages/FullWebsite4.png)
+
+---
+
+## 10. Additional Components Not Implemented
+
+The original architecture diagram also includes the following AWS services, which were not implemented in this project:
+
+- **Amazon Route 53:** For DNS management and domain routing.
+- **AWS Certificate Manager (ACM):** For provisioning and managing SSL/TLS certificates.
+
+These components can be added to support a custom domain and HTTPS configuration.
+
+---
+
+## 11. Cleanup and Resource Deletion
+
+Delete the AWS resources created for the project when they are no longer needed. This helps prevent ongoing charges.
+
+**Before deleting resources:** Back up any data you want to keep, and verify that the resources belong to this project.
+
+### 11.1 Recommended Cleanup Order
+
+1. **Amazon ECS:** Delete the ECS services, then delete the ECS cluster.
+2. **Application Load Balancer:** Delete the ALB and its associated target groups.
+3. **Amazon RDS:** Delete the PostgreSQL database after backing up any required data.
+4. **Amazon EC2:** Terminate the EC2 instance used for verification.
+5. **Amazon VPC:** Delete the NAT Gateway, release its associated Elastic IP address, and remove other dependent networking resources as appropriate.
+6. **Amazon API Gateway:** Delete the VPC link first, then delete the HTTP API.
+7. **Amazon Cognito:** Delete the Cognito user pool and associated app clients.
+8. **AWS Systems Manager:** Delete the Parameter Store parameters created for the project.
+9. **Amazon SNS:** Delete the SNS topic.
+10. **Amazon SQS:** Delete the SQS queue.
+11. **Amazon CloudWatch:** Delete the log groups created for the application.
+12. **Amazon S3:** Empty and delete the frontend and product-image buckets.
+13. **Amazon CloudFront:** Disable and delete the CloudFront distributions after addressing their dependencies.
+14. **Amazon DynamoDB:** Delete the Product and Cart tables.
+15. **Amazon ECR:** Delete the private repositories and their stored images.
+16. **IAM:** Review and delete project-specific IAM roles and policies that are no longer needed.
+17. **VPC resources:** Remove remaining project-specific security groups, route tables, subnets, and the Internet Gateway after all dependent resources have been deleted.
+
+Verify with Amazon Q
+![alt text](notesImages/AmazonQ.png)
+
+**Important:** AWS may prevent deletion while dependent resources still exist. Follow the dependency order shown in the AWS Console and confirm that no other applications depend on these resources before removing them.
