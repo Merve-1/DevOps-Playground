@@ -932,7 +932,8 @@ Delete the AWS resources created for the project when they are no longer needed.
 16. **IAM:** Review and delete project-specific IAM roles and policies that are no longer needed.
 17. **VPC resources:** Remove remaining project-specific security groups, route tables, subnets, and the Internet Gateway after all dependent resources have been deleted.
 
-Verify with Amazon Q
+**Verify with Amazon Q**
+
 ![alt text](notesImages/AmazonQ.png)
 
 **Important:** AWS may prevent deletion while dependent resources still exist. Follow the dependency order shown in the AWS Console and confirm that no other applications depend on these resources before removing them.
